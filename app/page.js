@@ -146,7 +146,6 @@ function PlatformRow({ platforms }) {
 
   return (
     <div>
-      {/* tabs */}
       <div style={{display:"flex",gap:"8px",flexWrap:"wrap",marginBottom:"16px"}}>
         {platforms.map((pk) => {
           const pl = PLATFORMS[pk];
@@ -171,13 +170,16 @@ function PlatformRow({ platforms }) {
                 {pl.label}
               </span>
               {pl.short}
-              {pl.isFree && <span style={{fontSize:"9px",fontWeight:700,color:"#1CE783",background:"rgba(28,231,131,0.1)",padding:"1px 5px",borderRadius:"3px"}}>FREE</span>}
+              {pl.isFree && (
+                <span style={{fontSize:"9px",fontWeight:700,color:"#1CE783",background:"rgba(28,231,131,0.1)",padding:"1px 5px",borderRadius:"3px"}}>
+                  FREE
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* selected panel */}
       <div style={{padding:"16px",borderRadius:"10px",background:"rgba(255,255,255,0.03)",border:`1px solid ${p.color}20`}}>
         <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"12px"}}>
           <div style={{width:"36px",height:"36px",borderRadius:"8px",background:p.bg,border:`1px solid ${p.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:p.color}}>
@@ -190,25 +192,21 @@ function PlatformRow({ platforms }) {
             </div>
           </div>
         </div>
-        
-          href={p.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => {
-            e.preventDefault();
-            if (confirm(`Open ${p.name} in a new tab?`)) window.open(p.url,"_blank","noopener,noreferrer");
+        <button
+          onClick={() => {
+            if (confirm("Open " + p.name + " in a new tab?")) {
+              window.open(p.url, "_blank", "noopener,noreferrer");
+            }
           }}
           style={{
             display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",
             width:"100%",padding:"10px",borderRadius:"8px",
             background:p.color,color:"#fff",fontWeight:700,fontSize:"13px",
-            textDecoration:"none",transition:"opacity 0.15s",cursor:"pointer",
+            border:"none",cursor:"pointer",transition:"opacity 0.15s",
           }}
-          onMouseEnter={(e)=>{e.currentTarget.style.opacity="0.85";}}
-          onMouseLeave={(e)=>{e.currentTarget.style.opacity="1";}}
         >
-          {"▶"} Watch on {p.short}
-        </a>
+          Watch on {p.short}
+        </button>
       </div>
     </div>
   );
