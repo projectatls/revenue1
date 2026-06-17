@@ -204,8 +204,8 @@ function PlatformRow({ platforms }) {
             background:p.color,color:"#fff",fontWeight:700,fontSize:"13px",
             textDecoration:"none",transition:"opacity 0.15s",cursor:"pointer",
           }}
-          onMouseEnter={(e)=>e.currentTarget.style.opacity="0.85"}
-          onMouseLeave={(e)=>e.currentTarget.style.opacity="1"}
+          onMouseEnter={(e)=>{e.currentTarget.style.opacity="0.85";}}
+          onMouseLeave={(e)=>{e.currentTarget.style.opacity="1";}}
         >
           {"▶"} Watch on {p.short}
         </a>
