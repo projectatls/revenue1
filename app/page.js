@@ -336,10 +336,50 @@ function PlatformRow({ providers }) {
 }
 
 // ─── DETAIL PAGE ─────────────────────────────────────────────────────────────
+// ─── PLATFORM BOX (sidebar, stacked) ────────────────────────────────────────
+function PlatformBox({ provider }) {
+  const p = provider;
+  return (
+    <div style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid " + p.color + "20",marginBottom:"10px",transition:"all 0.2s " + EASE}}
+      onMouseEnter={function(e){e.currentTarget.style.background="rgba(255,255,255,0.05)";e.currentTarget.style.borderColor=p.color+"40";}}
+      onMouseLeave={function(e){e.currentTarget.style.background="rgba(255,255,255,0.03)";e.currentTarget.style.borderColor=p.color+"20";}}
+    >
+      <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"10px"}}>
+        <div style={{width:"32px",height:"32px",borderRadius:"7px",background:p.bg,border:"1px solid " + p.color + "40",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"11px",fontWeight:800,color:p.color,flexShrink:0}}>
+          {p.label}
+        </div>
+        <div style={{minWidth:0}}>
+          <div style={{fontWeight:700,color:"#fff",fontSize:"13px",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
+          <div style={{fontSize:"10px",color:p.isFree?"#1CE783":"rgba(255,255,255,0.35)"}}>
+            {p.isFree ? "Free" : "Subscription"}
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={function() {
+          if (confirm("Open " + p.name + " in a new tab?")) {
+            window.open(p.url, "_blank", "noopener,noreferrer");
+          }
+        }}
+        style={{
+          display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",
+          width:"100%",padding:"8px",borderRadius:"7px",
+          background:p.color,color:"#fff",fontWeight:700,fontSize:"12px",
+          border:"none",cursor:"pointer",transition:"opacity 0.2s " + EASE,
+        }}
+        onMouseEnter={function(e){e.currentTarget.style.opacity="0.85";}}
+        onMouseLeave={function(e){e.currentTarget.style.opacity="1";}}
+      >
+        Watch on {p.short}
+      </button>
+    </div>
+  );
+}
+
+// ─── DETAIL PAGE ─────────────────────────────────────────────────────────────
 function DetailPage({ movie, onBack, onSelect }) {
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [watchlisted, setWatchlisted] = useState(false);
-  const [tab, setTab] = useState("watch");
   const [details, setDetails] = useState(null);
   const [trailerKey, setTrailerKey] = useState("");
   const [providers, setProviders] = useState({});
@@ -365,7 +405,7 @@ function DetailPage({ movie, onBack, onSelect }) {
         if (cancelled) return;
 
         setDetails(detailsData);
-        setCast(detailsData?.credits?.cast ? detailsData.credits.cast.slice(0, 8) : []);
+        setCast(detailsData?.credits?.cast ? detailsData.credits.cast.slice(0, 10) : []);
 
         const vids = videosData.results || [];
         let trailer = null;
@@ -412,13 +452,7 @@ function DetailPage({ movie, onBack, onSelect }) {
   const budget = details ? fmtMoney(details.budget) : null;
   const revenue = details ? fmtMoney(details.revenue) : null;
   const tagline = details && details.tagline ? details.tagline : null;
-
-  const tabs = [
-    {key:"watch", label:"Where to watch"},
-    {key:"synopsis", label:"Synopsis"},
-    {key:"cast", label:"Cast & details"},
-    {key:"similar", label:"Similar titles"},
-  ];
+  const providerIds = Object.keys(providers);
 
   return (
     <div style={{minHeight:"100vh",background:"#0d0d0f"}}>
@@ -504,9 +538,11 @@ function DetailPage({ movie, onBack, onSelect }) {
         </div>
       </div>
 
+      {/* MAIN CONTENT — continuous scroll, sidebar with stacked platform boxes */}
       <div style={{maxWidth:"1100px",margin:"0 auto",padding:"40px 32px 64px",display:"grid",gridTemplateColumns:"1fr 260px",gap:"48px",alignItems:"start"}}>
+
         <div>
-          {/* SCORE BADGES ROW */}
+          {/* SCORE BADGES */}
           {scores && (
             <div style={{display:"flex",gap:"12px",marginBottom:"32px",flexWrap:"wrap"}}>
               <ScoreBadge label="Audience Score" value={scores.pct + "%"} sub={scores.confidence + " sample size"} color="#22c55e" icon="👍" />
@@ -516,41 +552,10 @@ function DetailPage({ movie, onBack, onSelect }) {
             </div>
           )}
 
-          <div style={{display:"flex",gap:"0",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:"24px",overflowX:"auto"}}>
-            {tabs.map(function(t) {
-              return (
-                <button
-                  key={t.key}
-                  onClick={function(){ setTab(t.key); }}
-                  style={{
-                    padding:"10px 18px",fontSize:"13px",fontWeight:600,cursor:"pointer",
-                    background:"none",border:"none",whiteSpace:"nowrap",
-                    color:tab===t.key?"#fff":"rgba(255,255,255,0.35)",
-                    borderBottom:tab===t.key?"2px solid #fff":"2px solid transparent",
-                    marginBottom:"-1px",transition:"color 0.2s " + EASE,
-                  }}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {tab === "watch" && <PlatformRow providers={providers} />}
-
-          {tab === "synopsis" && (
-            <div>
-              <p style={{fontSize:"15px",lineHeight:1.8,color:"rgba(255,255,255,0.6)",maxWidth:"650px",marginBottom:"20px"}}>{longSummary}</p>
-              {details && details.production_companies && details.production_companies.length > 0 && (
-                <div style={{fontSize:"12px",color:"rgba(255,255,255,0.3)"}}>
-                  Produced by {details.production_companies.map(function(c){return c.name;}).join(", ")}
-                </div>
-              )}
-            </div>
-          )}
-
-          {tab === "cast" && (
-            <div>
+          {/* ── CAST ── */}
+          <div style={{marginBottom:"40px"}}>
+            <SectionTitle>Cast</SectionTitle>
+            <div style={{marginTop:"16px"}}>
               {cast.length > 0 ? (
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:"16px"}}>
                   {cast.map(function(c) {
@@ -571,36 +576,65 @@ function DetailPage({ movie, onBack, onSelect }) {
                 <div style={{fontSize:"13px",color:"rgba(255,255,255,0.3)"}}>Cast information not available.</div>
               )}
             </div>
-          )}
-
-          {tab === "similar" && (
-            <Carousel>
-              {loading
-                ? Array.from({length:5}).map(function(_,i){ return <MovieCardSkeleton key={i} />; })
-                : similar.map(function(m) {
-                    return <MovieCard key={m.id} movie={m} onClick={function(mv){ onSelect(mv); window.scrollTo({top:0,behavior:"smooth"}); }} />;
-                  })
-              }
-            </Carousel>
-          )}
-        </div>
-
-        <div>
-          <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"24px"}}>
-            <button
-              onClick={function(){ setWatchlisted(!watchlisted); }}
-              style={{
-                padding:"9px 16px",borderRadius:"7px",fontSize:"13px",fontWeight:600,cursor:"pointer",
-                background:watchlisted?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.04)",
-                border:watchlisted?"1px solid rgba(255,255,255,0.2)":"1px solid rgba(255,255,255,0.08)",
-                color:watchlisted?"#fff":"rgba(255,255,255,0.5)",transition:"all 0.2s " + EASE,
-              }}
-            >
-              {watchlisted ? "✓ In Watchlist" : "＋ Add to Watchlist"}
-            </button>
           </div>
 
-          <div style={{padding:"16px",borderRadius:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)"}}>
+          {/* ── SYNOPSIS ── */}
+          <div style={{marginBottom:"40px"}}>
+            <SectionTitle>Synopsis</SectionTitle>
+            <p style={{fontSize:"15px",lineHeight:1.8,color:"rgba(255,255,255,0.6)",maxWidth:"650px",marginTop:"16px",marginBottom:"14px"}}>{longSummary}</p>
+            {details && details.production_companies && details.production_companies.length > 0 && (
+              <div style={{fontSize:"12px",color:"rgba(255,255,255,0.3)"}}>
+                Produced by {details.production_companies.map(function(c){return c.name;}).join(", ")}
+              </div>
+            )}
+          </div>
+
+          {/* ── SIMILAR TITLES ── */}
+          <div>
+            <SectionTitle>Similar Titles</SectionTitle>
+            <div style={{marginTop:"16px"}}>
+              {loading ? (
+                <div style={{display:"flex",gap:"16px",overflowX:"auto"}}>
+                  {Array.from({length:5}).map(function(_,i){ return <MovieCardSkeleton key={i} />; })}
+                </div>
+              ) : (
+                <Carousel>
+                  {similar.map(function(m) {
+                    return <MovieCard key={m.id} movie={m} onClick={function(mv){ onSelect(mv); window.scrollTo({top:0,behavior:"smooth"}); }} />;
+                  })}
+                </Carousel>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── SIDEBAR: Where to Watch boxes + About + Watchlist ── */}
+        <div>
+          <button
+            onClick={function(){ setWatchlisted(!watchlisted); }}
+            style={{
+              width:"100%",padding:"9px 16px",borderRadius:"7px",fontSize:"13px",fontWeight:600,cursor:"pointer",
+              background:watchlisted?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.04)",
+              border:watchlisted?"1px solid rgba(255,255,255,0.2)":"1px solid rgba(255,255,255,0.08)",
+              color:watchlisted?"#fff":"rgba(255,255,255,0.5)",transition:"all 0.2s " + EASE,
+              marginBottom:"20px",
+            }}
+          >
+            {watchlisted ? "✓ In Watchlist" : "＋ Add to Watchlist"}
+          </button>
+
+          <div style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.3)",marginBottom:"12px"}}>Where to Watch</div>
+          {providerIds.length > 0 ? (
+            providerIds.map(function(pk) {
+              return <PlatformBox key={pk} provider={providers[pk]} />;
+            })
+          ) : (
+            <div style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",fontSize:"12px",color:"rgba(255,255,255,0.4)",marginBottom:"20px"}}>
+              No streaming availability found for your region yet.
+            </div>
+          )}
+
+          <div style={{padding:"16px",borderRadius:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",marginTop:"20px"}}>
             <div style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.3)",marginBottom:"14px"}}>About</div>
             {[
               ["Type", movie.mediaType==="tv"?"TV Show":"Movie"],
@@ -635,7 +669,6 @@ function DetailPage({ movie, onBack, onSelect }) {
   );
 }
 
-// ─── HOME PAGE ───────────────────────────────────────────────────────────────
 function HomePage({ onSelectMovie }) {
   const [query, setQuery] = useState("");
   const [acResults, setAcResults] = useState([]);
