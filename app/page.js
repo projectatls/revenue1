@@ -121,11 +121,11 @@ function MovieCard({ movie, onClick, size }) {
     >
       <div style={{
         position:"relative",width:w + "px",height:h + "px",borderRadius:"10px",overflow:"hidden",
-        border:"1px solid rgba(255,255,255,0.07)",
+        border:"1px solid rgba(255,255,255,0.09)",
         transition:"transform 0.35s " + EASE + ", box-shadow 0.35s " + EASE + ", border-color 0.35s " + EASE,
-        borderColor:hovered?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.07)",
+        borderColor:hovered?"rgba(255,255,255,0.25)":"rgba(255,255,255,0.09)",
         transform:hovered?"translateY(-6px) scale(1.015)":"translateY(0) scale(1)",
-        boxShadow:hovered?"0 20px 40px rgba(0,0,0,0.55)":"0 4px 12px rgba(0,0,0,0.25)",
+        boxShadow:hovered?"0 24px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)":"0 8px 20px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.3)",
         background:"#1a1a22"
       }}>
         <img src={movie.poster} alt={movie.title} style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform 0.5s " + EASE,transform:hovered?"scale(1.07)":"scale(1)"}} loading="lazy" />
@@ -166,11 +166,19 @@ function MovieCardSkeleton({ size }) {
 }
 
 // ─── SCORE BADGE ─────────────────────────────────────────────────────────────
-function ScoreBadge({ label, value, sub, color, icon }) {
+function ScoreBadge({ label, value, sub, color, icon, primary }) {
   return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",padding:"14px 18px",borderRadius:"12px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",minWidth:"110px"}}>
-      <div style={{fontSize:"22px",fontWeight:800,color:color,display:"flex",alignItems:"center",gap:"4px"}}>
-        <span style={{fontSize:"15px"}}>{icon}</span>{value}
+    <div style={{
+      display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",
+      padding: primary ? "16px 22px" : "14px 18px",
+      borderRadius:"12px",
+      background: primary ? "linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))" : "rgba(255,255,255,0.025)",
+      border: primary ? ("1px solid " + color + "35") : "1px solid rgba(255,255,255,0.06)",
+      boxShadow: primary ? ("0 0 28px " + color + "12, inset 0 1px 0 rgba(255,255,255,0.04)") : "none",
+      minWidth: primary ? "130px" : "110px",
+    }}>
+      <div style={{fontSize: primary ? "26px" : "20px",fontWeight:800,color:color,display:"flex",alignItems:"center",gap:"5px"}}>
+        <span style={{fontSize: primary ? "17px" : "14px"}}>{icon}</span>{value}
       </div>
       <div style={{fontSize:"11px",fontWeight:600,color:"rgba(255,255,255,0.5)",textAlign:"center"}}>{label}</div>
       {sub && <div style={{fontSize:"9px",color:"rgba(255,255,255,0.25)",textAlign:"center"}}>{sub}</div>}
@@ -545,7 +553,7 @@ function DetailPage({ movie, onBack, onSelect }) {
           {/* SCORE BADGES */}
           {scores && (
             <div style={{display:"flex",gap:"12px",marginBottom:"32px",flexWrap:"wrap"}}>
-              <ScoreBadge label="Audience Score" value={scores.pct + "%"} sub={scores.confidence + " sample size"} color="#22c55e" icon="👍" />
+              <ScoreBadge label="Audience Score" value={scores.pct + "%"} sub={scores.confidence + " sample size"} color="#22c55e" icon="👍" primary />
               <ScoreBadge label="TMDB Rating" value={scores.tenScale + "/10"} sub="community average" color="#f5c518" icon="⭐" />
               {budget && <ScoreBadge label="Budget" value={budget} sub="production cost" color="#60a5fa" icon="💰" />}
               {revenue && <ScoreBadge label="Box Office" value={revenue} sub="worldwide gross" color="#a78bfa" icon="🎟️" />}
@@ -608,55 +616,55 @@ function DetailPage({ movie, onBack, onSelect }) {
           </div>
         </div>
 
-        {/* ── SIDEBAR: Where to Watch boxes + About + Watchlist ── */}
-        <div>
+        {/* ── SIDEBAR: unified panel — Watchlist + Where to Watch + About ── */}
+        <div style={{borderRadius:"14px",background:"linear-gradient(160deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015))",border:"1px solid rgba(255,255,255,0.08)",padding:"18px",boxShadow:"0 12px 32px rgba(0,0,0,0.3)"}}>
           <button
             onClick={function(){ setWatchlisted(!watchlisted); }}
             style={{
-              width:"100%",padding:"9px 16px",borderRadius:"7px",fontSize:"13px",fontWeight:600,cursor:"pointer",
-              background:watchlisted?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.04)",
-              border:watchlisted?"1px solid rgba(255,255,255,0.2)":"1px solid rgba(255,255,255,0.08)",
-              color:watchlisted?"#fff":"rgba(255,255,255,0.5)",transition:"all 0.2s " + EASE,
+              width:"100%",padding:"10px 16px",borderRadius:"8px",fontSize:"13px",fontWeight:600,cursor:"pointer",
+              background:watchlisted?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.05)",
+              border:watchlisted?"1px solid rgba(255,255,255,0.22)":"1px solid rgba(255,255,255,0.1)",
+              color:watchlisted?"#fff":"rgba(255,255,255,0.6)",transition:"all 0.2s " + EASE,
               marginBottom:"20px",
             }}
           >
             {watchlisted ? "✓ In Watchlist" : "＋ Add to Watchlist"}
           </button>
 
-          <div style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.3)",marginBottom:"12px"}}>Where to Watch</div>
+          <div style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.35)",marginBottom:"12px"}}>Where to Watch</div>
           {providerIds.length > 0 ? (
             providerIds.map(function(pk) {
               return <PlatformBox key={pk} provider={providers[pk]} />;
             })
           ) : (
-            <div style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",fontSize:"12px",color:"rgba(255,255,255,0.4)",marginBottom:"20px"}}>
-              No streaming availability found for your region yet.
+            <div style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",fontSize:"12px",color:"rgba(255,255,255,0.4)",lineHeight:1.5}}>
+              No streaming availability found for your region yet. Check back as release date approaches.
             </div>
           )}
 
-          <div style={{padding:"16px",borderRadius:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",marginTop:"20px"}}>
-            <div style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.3)",marginBottom:"14px"}}>About</div>
-            {[
-              ["Type", movie.mediaType==="tv"?"TV Show":"Movie"],
-              ["Year", movie.year],
-              ["Runtime", runtime],
-              ["Status", details ? details.status : "—"],
-              ["Language", details && details.original_language ? details.original_language.toUpperCase() : "—"],
-            ].map(function(row) {
-              return (
-                <div key={row[0]} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"10px",gap:"8px"}}>
-                  <span style={{fontSize:"12px",color:"rgba(255,255,255,0.3)",flexShrink:0}}>{row[0]}</span>
-                  <span style={{fontSize:"12px",color:"rgba(255,255,255,0.75)",fontWeight:500,textAlign:"right"}}>{row[1]}</span>
-                </div>
-              );
-            })}
-            <div style={{marginTop:"4px"}}>
-              <span style={{fontSize:"12px",color:"rgba(255,255,255,0.3)"}}>Genres</span>
-              <div style={{display:"flex",flexWrap:"wrap",gap:"4px",marginTop:"6px"}}>
-                {genreNames.map(function(g) {
-                  return <span key={g} style={{fontSize:"11px",padding:"2px 8px",borderRadius:"4px",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",border:"1px solid rgba(255,255,255,0.08)"}}>{g}</span>;
-                })}
+          <div style={{height:"1px",background:"rgba(255,255,255,0.07)",margin:"20px 0"}} />
+
+          <div style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.35)",marginBottom:"14px"}}>About</div>
+          {[
+            ["Type", movie.mediaType==="tv"?"TV Show":"Movie"],
+            ["Year", movie.year],
+            ["Runtime", runtime],
+            ["Status", details ? details.status : "—"],
+            ["Language", details && details.original_language ? details.original_language.toUpperCase() : "—"],
+          ].map(function(row) {
+            return (
+              <div key={row[0]} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"10px",gap:"8px"}}>
+                <span style={{fontSize:"12px",color:"rgba(255,255,255,0.3)",flexShrink:0}}>{row[0]}</span>
+                <span style={{fontSize:"12px",color:"rgba(255,255,255,0.75)",fontWeight:500,textAlign:"right"}}>{row[1]}</span>
               </div>
+            );
+          })}
+          <div style={{marginTop:"4px"}}>
+            <span style={{fontSize:"12px",color:"rgba(255,255,255,0.3)"}}>Genres</span>
+            <div style={{display:"flex",flexWrap:"wrap",gap:"4px",marginTop:"6px"}}>
+              {genreNames.map(function(g) {
+                return <span key={g} style={{fontSize:"11px",padding:"2px 8px",borderRadius:"4px",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",border:"1px solid rgba(255,255,255,0.08)"}}>{g}</span>;
+              })}
             </div>
           </div>
 
@@ -804,8 +812,8 @@ function HomePage({ onSelectMovie }) {
               );
             })}
           </div>
-          <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom, rgba(13,13,15,0.55) 0%, rgba(13,13,15,0.25) 30%, rgba(13,13,15,0.7) 75%, rgba(13,13,15,1) 100%)"}} />
-          <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 60% at 50% 50%, transparent 40%, rgba(13,13,15,0.5) 100%)"}} />
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom, rgba(13,13,15,0.6) 0%, rgba(13,13,15,0.3) 30%, rgba(13,13,15,0.85) 80%, rgba(13,13,15,1) 100%)"}} />
+          <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 60% at 50% 45%, transparent 35%, rgba(13,13,15,0.55) 100%)"}} />
         </div>
 
         <div style={{position:"relative",zIndex:10,textAlign:"center",padding:"0 24px",width:"100%",maxWidth:"720px"}}>
@@ -928,9 +936,9 @@ function HomePage({ onSelectMovie }) {
                       <div
                         key={m.id}
                         onClick={function(){ onSelectMovie(m); }}
-                        style={{display:"flex",alignItems:"center",gap:"14px",padding:"10px 12px",borderRadius:"8px",cursor:"pointer",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",transition:"all 0.2s " + EASE}}
-                        onMouseEnter={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; e.currentTarget.style.transform="translateX(4px)"; }}
-                        onMouseLeave={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.05)"; e.currentTarget.style.transform="translateX(0)"; }}
+                        style={{display:"flex",alignItems:"center",gap:"14px",padding:"10px 12px",borderRadius:"8px",cursor:"pointer",background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",transition:"all 0.2s " + EASE, boxShadow:"none"}}
+                        onMouseEnter={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.06)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.12)"; e.currentTarget.style.transform="translateX(4px)"; e.currentTarget.style.boxShadow="0 8px 20px rgba(0,0,0,0.35)"; }}
+                        onMouseLeave={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.025)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.06)"; e.currentTarget.style.transform="translateX(0)"; e.currentTarget.style.boxShadow="none"; }}
                       >
                         <span style={{fontSize:"16px",fontWeight:800,minWidth:"24px",textAlign:"center",color:i<3?"#f5c518":"rgba(255,255,255,0.18)"}}>{i+1}</span>
                         <div style={{position:"relative",width:"46px",height:"66px",borderRadius:"6px",overflow:"hidden",flexShrink:0,background:"#1a1a22"}}>
@@ -960,9 +968,9 @@ function HomePage({ onSelectMovie }) {
                       <div
                         key={m.id}
                         onClick={function(){ onSelectMovie(m); }}
-                        style={{display:"flex",alignItems:"center",gap:"14px",padding:"10px 12px",borderRadius:"8px",cursor:"pointer",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",transition:"all 0.2s " + EASE}}
-                        onMouseEnter={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(28,231,131,0.15)"; e.currentTarget.style.transform="translateX(4px)"; }}
-                        onMouseLeave={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.05)"; e.currentTarget.style.transform="translateX(0)"; }}
+                        style={{display:"flex",alignItems:"center",gap:"14px",padding:"10px 12px",borderRadius:"8px",cursor:"pointer",background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",transition:"all 0.2s " + EASE, boxShadow:"none"}}
+                        onMouseEnter={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.06)"; e.currentTarget.style.borderColor="rgba(28,231,131,0.2)"; e.currentTarget.style.transform="translateX(4px)"; e.currentTarget.style.boxShadow="0 8px 20px rgba(0,0,0,0.35)"; }}
+                        onMouseLeave={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.025)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.06)"; e.currentTarget.style.transform="translateX(0)"; e.currentTarget.style.boxShadow="none"; }}
                       >
                         <div style={{position:"relative",width:"46px",height:"66px",borderRadius:"6px",overflow:"hidden",flexShrink:0,background:"#1a1a22"}}>
                           {m.poster && <img src={m.poster} alt={m.title} style={{width:"100%",height:"100%",objectFit:"cover"}} loading="lazy" />}
@@ -1014,7 +1022,12 @@ function Section({ title, children }) {
   );
 }
 function SectionTitle({ children }) {
-  return <div style={{fontSize:"16px",fontWeight:700,color:"#fff",letterSpacing:"-0.01em"}}>{children}</div>;
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+      <div style={{width:"3px",height:"16px",borderRadius:"2px",background:"linear-gradient(180deg,#818cf8,#60a5fa)"}} />
+      <div style={{fontSize:"17px",fontWeight:700,color:"#fff",letterSpacing:"-0.01em"}}>{children}</div>
+    </div>
+  );
 }
 function Divider() {
   return <div style={{height:"1px",background:"rgba(255,255,255,0.05)",margin:"0 32px"}} />;
