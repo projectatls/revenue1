@@ -539,9 +539,9 @@ function DetailPage({ movie, onBack, onSelect }) {
       </div>
 
       {/* MAIN CONTENT — continuous scroll, sidebar with stacked platform boxes */}
-      <div style={{maxWidth:"1100px",margin:"0 auto",padding:"40px 32px 64px",display:"grid",gridTemplateColumns:"1fr 260px",gap:"48px",alignItems:"start"}}>
+      <div style={{maxWidth:"1100px",margin:"0 auto",padding:"40px 32px 64px",display:"grid",gridTemplateColumns:"minmax(0,1fr) 260px",gap:"48px",alignItems:"start"}}>
 
-        <div>
+        <div style={{minWidth:0,overflow:"hidden"}}>
           {/* SCORE BADGES */}
           {scores && (
             <div style={{display:"flex",gap:"12px",marginBottom:"32px",flexWrap:"wrap"}}>
@@ -557,7 +557,7 @@ function DetailPage({ movie, onBack, onSelect }) {
             <SectionTitle>Cast</SectionTitle>
             <div style={{marginTop:"16px"}}>
               {cast.length > 0 ? (
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:"16px"}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(90px,1fr))",gap:"16px"}}>
                   {cast.map(function(c) {
                     return (
                       <div key={c.id} style={{textAlign:"center"}}>
@@ -1029,7 +1029,7 @@ export default function Muuvie() {
   }
 
   return (
-    <div style={{background:"#0d0d0f",minHeight:"100vh",fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"}}>
+    <div style={{background:"#0d0d0f",minHeight:"100vh",fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",overflowX:"hidden"}}>
 
       <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,height:"64px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 32px",background:"rgba(13,13,15,0.9)",borderBottom:"1px solid rgba(255,255,255,0.07)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
         <button
