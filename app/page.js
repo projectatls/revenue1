@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 
 const IMG = "https://image.tmdb.org/t/p";
-const SITE_NAME = "Muuvie";
+const SITE_NAME = "muuvi";
 const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 const PLATFORMS = {
