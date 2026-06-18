@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 
 const IMG = "https://image.tmdb.org/t/p";
-const SITE_NAME = "StreamWatchGo";
+const SITE_NAME = "Muuvie";
+const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 const PLATFORMS = {
   8:    {name:"Netflix",       short:"Netflix",  color:"#E50914", bg:"#1a0000", label:"N",  url:"https://netflix.com"},
@@ -58,8 +59,26 @@ function normalizeItem(item, mediaTypeOverride) {
   };
 }
 
+// Derive presentational "critic" and "audience" style scores from the one
+// real TMDB rating we have, so we're not fabricating a second data source —
+// just presenting the same number two ways (out of 100, and out of 10).
+function deriveScores(rating, voteCount) {
+  if (!rating) return null;
+  const pct = Math.round(rating * 10);
+  const confidence = voteCount > 5000 ? "high" : voteCount > 500 ? "moderate" : "limited";
+  return { pct, tenScale: rating, confidence };
+}
+
+function fmtMoney(n) {
+  if (!n) return null;
+  if (n >= 1e9) return "$" + (n / 1e9).toFixed(1) + "B";
+  if (n >= 1e6) return "$" + (n / 1e6).toFixed(1) + "M";
+  return "$" + n.toLocaleString();
+}
+
+// ─── TRAILER MODAL ──────────────────────────────────────────────────────────
 function TrailerModal({ trailerKey, title, onClose }) {
-  useEffect(() => {
+  useEffect(function() {
     const h = function(e) { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h);
     return function() { window.removeEventListener("keydown", h); };
@@ -68,10 +87,13 @@ function TrailerModal({ trailerKey, title, onClose }) {
   return (
     <div
       onClick={function(e) { if (e.target === e.currentTarget) onClose(); }}
-      style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px"}}
+      style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px",animation:"fadeIn 0.25s " + EASE}}
     >
-      <div style={{width:"100%",maxWidth:"900px",borderRadius:"12px",overflow:"hidden",background:"#0d0d0d",border:"1px solid rgba(255,255,255,0.1)",position:"relative"}}>
-        <button onClick={onClose} style={{position:"absolute",top:"12px",right:"12px",zIndex:10,width:"32px",height:"32px",borderRadius:"50%",background:"rgba(0,0,0,0.8)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.7)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px"}}>✕</button>
+      <div style={{width:"100%",maxWidth:"900px",borderRadius:"12px",overflow:"hidden",background:"#0d0d0d",border:"1px solid rgba(255,255,255,0.1)",position:"relative",animation:"scaleIn 0.3s " + EASE}}>
+        <button onClick={onClose} style={{position:"absolute",top:"12px",right:"12px",zIndex:10,width:"32px",height:"32px",borderRadius:"50%",background:"rgba(0,0,0,0.8)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.7)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",transition:"background 0.2s " + EASE}}
+          onMouseEnter={function(e){e.currentTarget.style.background="rgba(255,255,255,0.15)";}}
+          onMouseLeave={function(e){e.currentTarget.style.background="rgba(0,0,0,0.8)";}}
+        >✕</button>
         <div style={{position:"relative",paddingBottom:"56.25%",height:0}}>
           <iframe style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none"}} src={"https://www.youtube.com/embed/" + trailerKey + "?autoplay=1&rel=0"} title={title + " Trailer"} allow="autoplay; encrypted-media" allowFullScreen />
         </div>
@@ -79,34 +101,51 @@ function TrailerModal({ trailerKey, title, onClose }) {
           Official trailer only · {SITE_NAME} does not stream full content
         </div>
       </div>
+      <style>{"@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes scaleIn{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}"}</style>
     </div>
   );
 }
 
-function MovieCard({ movie, onClick }) {
+// ─── MOVIE CARD ─────────────────────────────────────────────────────────────
+function MovieCard({ movie, onClick, size }) {
   const [hovered, setHovered] = useState(false);
   if (!movie.poster) return null;
+  const w = size === "lg" ? 190 : 170;
+  const h = size === "lg" ? 284 : 255;
   return (
     <div
       onClick={function() { onClick(movie); }}
       onMouseEnter={function() { setHovered(true); }}
       onMouseLeave={function() { setHovered(false); }}
-      style={{flexShrink:0,width:"170px",cursor:"pointer",userSelect:"none"}}
+      style={{flexShrink:0,width:w + "px",cursor:"pointer",userSelect:"none"}}
     >
-      <div style={{position:"relative",width:"170px",height:"255px",borderRadius:"10px",overflow:"hidden",border:"1px solid rgba(255,255,255,0.07)",transition:"border-color 0.2s, transform 0.25s",borderColor:hovered?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.07)",transform:hovered?"translateY(-4px)":"translateY(0)",boxShadow:hovered?"0 16px 32px rgba(0,0,0,0.5)":"0 4px 12px rgba(0,0,0,0.25)",background:"#1a1a22"}}>
-        <img src={movie.poster} alt={movie.title} style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform 0.4s ease",transform:hovered?"scale(1.05)":"scale(1)"}} loading="lazy" />
-        <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.35) 45%, transparent 70%)"}} />
-        {hovered && (
-          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.15)"}}>
-            <div style={{width:"46px",height:"46px",borderRadius:"50%",background:"rgba(34,197,94,0.9)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(34,197,94,0.5)"}}>
-              <span style={{color:"#fff",fontSize:"14px",marginLeft:"2px"}}>▶</span>
-            </div>
+      <div style={{
+        position:"relative",width:w + "px",height:h + "px",borderRadius:"10px",overflow:"hidden",
+        border:"1px solid rgba(255,255,255,0.07)",
+        transition:"transform 0.35s " + EASE + ", box-shadow 0.35s " + EASE + ", border-color 0.35s " + EASE,
+        borderColor:hovered?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.07)",
+        transform:hovered?"translateY(-6px) scale(1.015)":"translateY(0) scale(1)",
+        boxShadow:hovered?"0 20px 40px rgba(0,0,0,0.55)":"0 4px 12px rgba(0,0,0,0.25)",
+        background:"#1a1a22"
+      }}>
+        <img src={movie.poster} alt={movie.title} style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform 0.5s " + EASE,transform:hovered?"scale(1.07)":"scale(1)"}} loading="lazy" />
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.35) 45%, transparent 70%)",transition:"opacity 0.3s " + EASE,opacity:hovered?1:0.92}} />
+        <div style={{
+          position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
+          background:"rgba(0,0,0,0.15)",
+          opacity:hovered?1:0,
+          transform:hovered?"scale(1)":"scale(0.85)",
+          transition:"opacity 0.25s " + EASE + ", transform 0.25s " + EASE,
+          pointerEvents:"none",
+        }}>
+          <div style={{width:"46px",height:"46px",borderRadius:"50%",background:"rgba(34,197,94,0.92)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(34,197,94,0.5)"}}>
+            <span style={{color:"#fff",fontSize:"14px",marginLeft:"2px"}}>▶</span>
           </div>
-        )}
+        </div>
         <div style={{position:"absolute",top:"8px",left:"8px",background:"rgba(0,0,0,0.65)",backdropFilter:"blur(6px)",borderRadius:"5px",padding:"3px 7px",fontSize:"11px",fontWeight:600,color:"rgba(255,255,255,0.9)"}}>
           {movie.rating ? ("⭐ " + movie.rating) : "—"}
         </div>
-        <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"10px"}}>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"10px",transform:hovered?"translateY(-2px)":"translateY(0)",transition:"transform 0.3s " + EASE}}>
           <div style={{fontSize:"13px",fontWeight:700,color:"#fff",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",marginBottom:"2px"}}>{movie.title}</div>
           <div style={{fontSize:"11px",color:"rgba(255,255,255,0.45)"}}>{movie.year} · {movie.mediaType==="tv"?"TV":"Film"}</div>
         </div>
@@ -115,15 +154,107 @@ function MovieCard({ movie, onClick }) {
   );
 }
 
-function MovieCardSkeleton() {
+function MovieCardSkeleton({ size }) {
+  const w = size === "lg" ? 190 : 170;
+  const h = size === "lg" ? 284 : 255;
   return (
-    <div style={{flexShrink:0,width:"170px"}}>
-      <div style={{width:"170px",height:"255px",borderRadius:"10px",background:"linear-gradient(110deg, #161620 8%, #1e1e2a 18%, #161620 33%)",backgroundSize:"200% 100%",animation:"shimmer 1.5s linear infinite"}} />
+    <div style={{flexShrink:0,width:w + "px"}}>
+      <div style={{width:w + "px",height:h + "px",borderRadius:"10px",background:"linear-gradient(110deg, #161620 8%, #1e1e2a 18%, #161620 33%)",backgroundSize:"200% 100%",animation:"shimmer 1.5s linear infinite"}} />
       <style>{"@keyframes shimmer { to { background-position-x: -200%; } }"}</style>
     </div>
   );
 }
 
+// ─── SCORE BADGE ─────────────────────────────────────────────────────────────
+function ScoreBadge({ label, value, sub, color, icon }) {
+  return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",padding:"14px 18px",borderRadius:"12px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",minWidth:"110px"}}>
+      <div style={{fontSize:"22px",fontWeight:800,color:color,display:"flex",alignItems:"center",gap:"4px"}}>
+        <span style={{fontSize:"15px"}}>{icon}</span>{value}
+      </div>
+      <div style={{fontSize:"11px",fontWeight:600,color:"rgba(255,255,255,0.5)",textAlign:"center"}}>{label}</div>
+      {sub && <div style={{fontSize:"9px",color:"rgba(255,255,255,0.25)",textAlign:"center"}}>{sub}</div>}
+    </div>
+  );
+}
+
+// ─── CAROUSEL (with hover arrows) ───────────────────────────────────────────
+function Carousel({ children, rowRef }) {
+  const ref = rowRef || useRef(null);
+  const [hovered, setHovered] = useState(false);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(true);
+
+  function updateArrows() {
+    const el = ref.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 8);
+    setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
+  }
+
+  useEffect(function() {
+    updateArrows();
+    const el = ref.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateArrows);
+    window.addEventListener("resize", updateArrows);
+    return function() {
+      el.removeEventListener("scroll", updateArrows);
+      window.removeEventListener("resize", updateArrows);
+    };
+  }, []);
+
+  function scrollBy(dir) {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * (el.clientWidth * 0.8), behavior: "smooth" });
+  }
+
+  return (
+    <div
+      style={{position:"relative"}}
+      onMouseEnter={function(){ setHovered(true); }}
+      onMouseLeave={function(){ setHovered(false); }}
+    >
+      <div ref={ref} style={{display:"flex",gap:"16px",overflowX:"auto",paddingBottom:"8px",scrollbarWidth:"none",scrollBehavior:"smooth"}}>
+        {children}
+      </div>
+
+      {canLeft && (
+        <button
+          onClick={function(){ scrollBy(-1); }}
+          style={{
+            position:"absolute",left:"-8px",top:"0",bottom:"8px",width:"56px",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            background:"linear-gradient(to right, #0d0d0f 20%, transparent)",
+            border:"none",cursor:"pointer",zIndex:5,
+            opacity:hovered?1:0,
+            transition:"opacity 0.25s " + EASE,
+          }}
+        >
+          <div style={{width:"36px",height:"36px",borderRadius:"50%",background:"rgba(20,20,26,0.9)",border:"1px solid rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:"16px",backdropFilter:"blur(8px)"}}>‹</div>
+        </button>
+      )}
+      {canRight && (
+        <button
+          onClick={function(){ scrollBy(1); }}
+          style={{
+            position:"absolute",right:"-8px",top:"0",bottom:"8px",width:"56px",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            background:"linear-gradient(to left, #0d0d0f 20%, transparent)",
+            border:"none",cursor:"pointer",zIndex:5,
+            opacity:hovered?1:0,
+            transition:"opacity 0.25s " + EASE,
+          }}
+        >
+          <div style={{width:"36px",height:"36px",borderRadius:"50%",background:"rgba(20,20,26,0.9)",border:"1px solid rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:"16px",backdropFilter:"blur(8px)"}}>›</div>
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── PLATFORM ROW (detail page) ─────────────────────────────────────────────
 function PlatformRow({ providers }) {
   const ids = Object.keys(providers || {});
   const [selected, setSelected] = useState(ids[0]);
@@ -155,7 +286,7 @@ function PlatformRow({ providers }) {
                 color: active ? "#fff" : "rgba(255,255,255,0.4)",
                 cursor:"pointer",fontSize:"13px",fontWeight:600,
                 boxShadow: active ? ("0 0 12px " + pl.color + "25") : "none",
-                transition:"all 0.15s",
+                transition:"all 0.2s " + EASE,
               }}
             >
               <span style={{width:"20px",height:"20px",borderRadius:"4px",background:pl.bg,border:"1px solid " + pl.color + "40",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"9px",fontWeight:800,color:pl.color,flexShrink:0}}>
@@ -192,8 +323,10 @@ function PlatformRow({ providers }) {
             display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",
             width:"100%",padding:"10px",borderRadius:"8px",
             background:p.color,color:"#fff",fontWeight:700,fontSize:"13px",
-            border:"none",cursor:"pointer",transition:"opacity 0.15s",
+            border:"none",cursor:"pointer",transition:"opacity 0.2s " + EASE,
           }}
+          onMouseEnter={function(e){e.currentTarget.style.opacity="0.85";}}
+          onMouseLeave={function(e){e.currentTarget.style.opacity="1";}}
         >
           Watch on {p.short}
         </button>
@@ -202,6 +335,7 @@ function PlatformRow({ providers }) {
   );
 }
 
+// ─── DETAIL PAGE ─────────────────────────────────────────────────────────────
 function DetailPage({ movie, onBack, onSelect }) {
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [watchlisted, setWatchlisted] = useState(false);
@@ -210,6 +344,7 @@ function DetailPage({ movie, onBack, onSelect }) {
   const [trailerKey, setTrailerKey] = useState("");
   const [providers, setProviders] = useState({});
   const [similar, setSimilar] = useState([]);
+  const [cast, setCast] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(function() {
@@ -230,6 +365,7 @@ function DetailPage({ movie, onBack, onSelect }) {
         if (cancelled) return;
 
         setDetails(detailsData);
+        setCast(detailsData?.credits?.cast ? detailsData.credits.cast.slice(0, 8) : []);
 
         const vids = videosData.results || [];
         let trailer = null;
@@ -252,7 +388,7 @@ function DetailPage({ movie, onBack, onSelect }) {
         const simList = (similarData.results || [])
           .map(function(it) { return normalizeItem(it, movie.mediaType); })
           .filter(function(m) { return m.id !== movie.id; })
-          .slice(0, 8);
+          .slice(0, 10);
         setSimilar(simList);
       } catch (e) {
         console.error(e);
@@ -272,10 +408,15 @@ function DetailPage({ movie, onBack, onSelect }) {
     : "—";
 
   const longSummary = details ? expandOverview(details, genreNames) : "Loading synopsis…";
+  const scores = details ? deriveScores(details.vote_average, details.vote_count) : null;
+  const budget = details ? fmtMoney(details.budget) : null;
+  const revenue = details ? fmtMoney(details.revenue) : null;
+  const tagline = details && details.tagline ? details.tagline : null;
 
   const tabs = [
     {key:"watch", label:"Where to watch"},
     {key:"synopsis", label:"Synopsis"},
+    {key:"cast", label:"Cast & details"},
     {key:"similar", label:"Similar titles"},
   ];
 
@@ -295,7 +436,7 @@ function DetailPage({ movie, onBack, onSelect }) {
         <div style={{position:"absolute",top:"84px",left:"32px",zIndex:5}}>
           <button
             onClick={onBack}
-            style={{display:"flex",alignItems:"center",gap:"6px",padding:"6px 14px",borderRadius:"6px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:"13px",fontWeight:500,transition:"all 0.15s",backdropFilter:"blur(8px)"}}
+            style={{display:"flex",alignItems:"center",gap:"6px",padding:"6px 14px",borderRadius:"6px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:"13px",fontWeight:500,transition:"all 0.2s " + EASE,backdropFilter:"blur(8px)"}}
             onMouseEnter={function(e){e.currentTarget.style.background="rgba(0,0,0,0.6)";e.currentTarget.style.color="#fff";}}
             onMouseLeave={function(e){e.currentTarget.style.background="rgba(0,0,0,0.4)";e.currentTarget.style.color="rgba(255,255,255,0.7)";}}
           >
@@ -317,7 +458,7 @@ function DetailPage({ movie, onBack, onSelect }) {
             display:"flex",alignItems:"center",justifyContent:"center",
             cursor: trailerKey ? "pointer" : "not-allowed",
             boxShadow: trailerKey ? "0 0 0 12px rgba(255,255,255,0.05), 0 12px 40px rgba(34,197,94,0.5)" : "none",
-            transition:"transform 0.2s, box-shadow 0.2s",
+            transition:"transform 0.25s " + EASE + ", box-shadow 0.25s " + EASE,
             zIndex:4,
           }}
           onMouseEnter={function(e){ if(trailerKey){ e.currentTarget.style.transform="translate(-50%,-50%) scale(1.08)"; }}}
@@ -337,9 +478,12 @@ function DetailPage({ movie, onBack, onSelect }) {
               return <span key={g} style={{padding:"2px 10px",borderRadius:"4px",fontSize:"11px",fontWeight:600,background:"rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.7)",border:"1px solid rgba(255,255,255,0.12)",backdropFilter:"blur(8px)"}}>{g}</span>;
             })}
           </div>
-          <h1 style={{fontSize:"clamp(2rem,4vw,3.2rem)",fontWeight:900,color:"#fff",letterSpacing:"-0.02em",lineHeight:1.1,marginBottom:"10px",textTransform:"uppercase",textShadow:"0 4px 24px rgba(0,0,0,0.6)"}}>
+          <h1 style={{fontSize:"clamp(2rem,4vw,3.2rem)",fontWeight:900,color:"#fff",letterSpacing:"-0.02em",lineHeight:1.1,marginBottom:"8px",textTransform:"uppercase",textShadow:"0 4px 24px rgba(0,0,0,0.6)"}}>
             {movie.title} <span style={{fontSize:"0.45em",fontWeight:400,color:"rgba(255,255,255,0.5)",textTransform:"none"}}>({movie.year})</span>
           </h1>
+          {tagline && (
+            <div style={{fontSize:"14px",fontStyle:"italic",color:"rgba(255,255,255,0.45)",marginBottom:"10px"}}>"{tagline}"</div>
+          )}
           <div style={{display:"flex",alignItems:"center",gap:"12px",fontSize:"13px",color:"rgba(255,255,255,0.6)",flexWrap:"wrap"}}>
             <span style={{color:"#f5c518",fontWeight:600}}>⭐ {movie.rating || "—"}</span>
             <span>·</span>
@@ -360,20 +504,30 @@ function DetailPage({ movie, onBack, onSelect }) {
         </div>
       </div>
 
-      <div style={{maxWidth:"1100px",margin:"0 auto",padding:"56px 32px 64px",display:"grid",gridTemplateColumns:"1fr 240px",gap:"48px",alignItems:"start"}}>
+      <div style={{maxWidth:"1100px",margin:"0 auto",padding:"40px 32px 64px",display:"grid",gridTemplateColumns:"1fr 260px",gap:"48px",alignItems:"start"}}>
         <div>
-          <div style={{display:"flex",gap:"0",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:"24px"}}>
+          {/* SCORE BADGES ROW */}
+          {scores && (
+            <div style={{display:"flex",gap:"12px",marginBottom:"32px",flexWrap:"wrap"}}>
+              <ScoreBadge label="Audience Score" value={scores.pct + "%"} sub={scores.confidence + " sample size"} color="#22c55e" icon="👍" />
+              <ScoreBadge label="TMDB Rating" value={scores.tenScale + "/10"} sub="community average" color="#f5c518" icon="⭐" />
+              {budget && <ScoreBadge label="Budget" value={budget} sub="production cost" color="#60a5fa" icon="💰" />}
+              {revenue && <ScoreBadge label="Box Office" value={revenue} sub="worldwide gross" color="#a78bfa" icon="🎟️" />}
+            </div>
+          )}
+
+          <div style={{display:"flex",gap:"0",borderBottom:"1px solid rgba(255,255,255,0.08)",marginBottom:"24px",overflowX:"auto"}}>
             {tabs.map(function(t) {
               return (
                 <button
                   key={t.key}
                   onClick={function(){ setTab(t.key); }}
                   style={{
-                    padding:"10px 20px",fontSize:"13px",fontWeight:600,cursor:"pointer",
-                    background:"none",border:"none",
+                    padding:"10px 18px",fontSize:"13px",fontWeight:600,cursor:"pointer",
+                    background:"none",border:"none",whiteSpace:"nowrap",
                     color:tab===t.key?"#fff":"rgba(255,255,255,0.35)",
                     borderBottom:tab===t.key?"2px solid #fff":"2px solid transparent",
-                    marginBottom:"-1px",transition:"color 0.15s",
+                    marginBottom:"-1px",transition:"color 0.2s " + EASE,
                   }}
                 >
                   {t.label}
@@ -385,18 +539,49 @@ function DetailPage({ movie, onBack, onSelect }) {
           {tab === "watch" && <PlatformRow providers={providers} />}
 
           {tab === "synopsis" && (
-            <p style={{fontSize:"15px",lineHeight:1.8,color:"rgba(255,255,255,0.6)",maxWidth:"650px"}}>{longSummary}</p>
+            <div>
+              <p style={{fontSize:"15px",lineHeight:1.8,color:"rgba(255,255,255,0.6)",maxWidth:"650px",marginBottom:"20px"}}>{longSummary}</p>
+              {details && details.production_companies && details.production_companies.length > 0 && (
+                <div style={{fontSize:"12px",color:"rgba(255,255,255,0.3)"}}>
+                  Produced by {details.production_companies.map(function(c){return c.name;}).join(", ")}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === "cast" && (
+            <div>
+              {cast.length > 0 ? (
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:"16px"}}>
+                  {cast.map(function(c) {
+                    return (
+                      <div key={c.id} style={{textAlign:"center"}}>
+                        <div style={{width:"100%",aspectRatio:"1",borderRadius:"50%",overflow:"hidden",background:"#1a1a22",marginBottom:"8px",border:"1px solid rgba(255,255,255,0.08)"}}>
+                          {c.profile_path && (
+                            <img src={imgUrl(c.profile_path, "w185")} alt={c.name} style={{width:"100%",height:"100%",objectFit:"cover"}} loading="lazy" />
+                          )}
+                        </div>
+                        <div style={{fontSize:"12px",fontWeight:600,color:"#fff"}}>{c.name}</div>
+                        <div style={{fontSize:"11px",color:"rgba(255,255,255,0.35)"}}>{c.character}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{fontSize:"13px",color:"rgba(255,255,255,0.3)"}}>Cast information not available.</div>
+              )}
+            </div>
           )}
 
           {tab === "similar" && (
-            <div style={{display:"flex",gap:"16px",overflowX:"auto",paddingBottom:"8px"}}>
+            <Carousel>
               {loading
                 ? Array.from({length:5}).map(function(_,i){ return <MovieCardSkeleton key={i} />; })
                 : similar.map(function(m) {
                     return <MovieCard key={m.id} movie={m} onClick={function(mv){ onSelect(mv); window.scrollTo({top:0,behavior:"smooth"}); }} />;
                   })
               }
-            </div>
+            </Carousel>
           )}
         </div>
 
@@ -408,7 +593,7 @@ function DetailPage({ movie, onBack, onSelect }) {
                 padding:"9px 16px",borderRadius:"7px",fontSize:"13px",fontWeight:600,cursor:"pointer",
                 background:watchlisted?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.04)",
                 border:watchlisted?"1px solid rgba(255,255,255,0.2)":"1px solid rgba(255,255,255,0.08)",
-                color:watchlisted?"#fff":"rgba(255,255,255,0.5)",transition:"all 0.15s",
+                color:watchlisted?"#fff":"rgba(255,255,255,0.5)",transition:"all 0.2s " + EASE,
               }}
             >
               {watchlisted ? "✓ In Watchlist" : "＋ Add to Watchlist"}
@@ -421,7 +606,8 @@ function DetailPage({ movie, onBack, onSelect }) {
               ["Type", movie.mediaType==="tv"?"TV Show":"Movie"],
               ["Year", movie.year],
               ["Runtime", runtime],
-              ["TMDB", movie.rating ? (movie.rating + " / 10") : "—"],
+              ["Status", details ? details.status : "—"],
+              ["Language", details && details.original_language ? details.original_language.toUpperCase() : "—"],
             ].map(function(row) {
               return (
                 <div key={row[0]} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"10px",gap:"8px"}}>
@@ -449,6 +635,7 @@ function DetailPage({ movie, onBack, onSelect }) {
   );
 }
 
+// ─── HOME PAGE ───────────────────────────────────────────────────────────────
 function HomePage({ onSelectMovie }) {
   const [query, setQuery] = useState("");
   const [acResults, setAcResults] = useState([]);
@@ -491,17 +678,17 @@ function HomePage({ onSelectMovie }) {
           .concat((trendingTV.results || []).map(function(m){return normalizeItem(m,"tv");}))
           .filter(function(m){return m.poster;})
           .sort(function(a,b){return b.popularity - a.popularity;})
-          .slice(0, 14);
+          .slice(0, 16);
 
         const popularList = (popularMovies.results || [])
           .map(function(m){return normalizeItem(m,"movie");})
           .filter(function(m){return m.poster;})
-          .slice(0, 8);
+          .slice(0, 10);
 
         const newList = (nowPlaying.results || [])
           .map(function(m){return normalizeItem(m,"movie");})
           .filter(function(m){return m.poster;})
-          .slice(0, 14);
+          .slice(0, 16);
 
         setTrending(combinedTrending);
         setPopular(popularList);
@@ -571,7 +758,7 @@ function HomePage({ onSelectMovie }) {
   return (
     <div style={{minHeight:"100vh",background:"#0d0d0f"}}>
 
-      <div style={{position:"relative",minHeight:"580px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingTop:"64px"}}>
+      <div style={{position:"relative",minHeight:"520px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingTop:"64px"}}>
         <div style={{position:"absolute",inset:0,overflow:"hidden"}}>
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",height:"100%",gap:"2px"}}>
             {(heroBackdrops.length ? heroBackdrops : Array.from({length:8})).map(function(m, i) {
@@ -610,7 +797,7 @@ function HomePage({ onSelectMovie }) {
                 border:"1px solid rgba(255,255,255,0.12)",
                 borderRadius:"8px",
                 color:"#fff",fontSize:"14px",outline:"none",
-                transition:"border-color 0.2s, background 0.2s",
+                transition:"border-color 0.2s " + EASE + ", background 0.2s " + EASE,
               }}
               onFocus={function(e){ e.target.style.borderColor="rgba(255,255,255,0.3)"; e.target.style.background="rgba(255,255,255,0.09)"; }}
               onBlur={function(e){ e.target.style.borderColor="rgba(255,255,255,0.12)"; e.target.style.background="rgba(255,255,255,0.06)"; }}
@@ -618,13 +805,13 @@ function HomePage({ onSelectMovie }) {
             <span style={{position:"absolute",right:"14px",top:"50%",transform:"translateY(-50%)",fontSize:"10px",color:"rgba(255,255,255,0.2)",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"2px 6px"}}>⌘K</span>
 
             {acResults.length > 0 && (
-              <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,right:0,background:"#161620",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"8px",overflow:"hidden",zIndex:50,boxShadow:"0 16px 40px rgba(0,0,0,0.6)"}}>
+              <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,right:0,background:"#161620",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"8px",overflow:"hidden",zIndex:50,boxShadow:"0 16px 40px rgba(0,0,0,0.6)",animation:"fadeSlide 0.2s " + EASE}}>
                 {acResults.map(function(m, i) {
                   return (
                     <div
                       key={m.id}
                       onClick={function(){ setAcResults([]); setQuery(""); onSelectMovie(m); }}
-                      style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px 14px",cursor:"pointer",borderBottom:i<acResults.length-1?"1px solid rgba(255,255,255,0.05)":"none",transition:"background 0.1s"}}
+                      style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px 14px",cursor:"pointer",borderBottom:i<acResults.length-1?"1px solid rgba(255,255,255,0.05)":"none",transition:"background 0.15s " + EASE}}
                       onMouseEnter={function(e){e.currentTarget.style.background="rgba(255,255,255,0.05)";}}
                       onMouseLeave={function(e){e.currentTarget.style.background="transparent";}}
                     >
@@ -651,30 +838,11 @@ function HomePage({ onSelectMovie }) {
                     background:activeFilter===f.key?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.06)",
                     border:activeFilter===f.key?"1px solid transparent":"1px solid rgba(255,255,255,0.1)",
                     color:activeFilter===f.key?"#0d0d0f":"rgba(255,255,255,0.45)",
-                    transition:"all 0.15s",
+                    transition:"all 0.2s " + EASE,
                   }}
                 >
                   {f.label}
                 </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={{position:"relative",zIndex:10,marginTop:"36px",textAlign:"center"}}>
-          <div style={{fontSize:"11px",color:"rgba(255,255,255,0.2)",marginBottom:"10px",letterSpacing:"0.05em"}}>Streaming services on {SITE_NAME}</div>
-          <div style={{display:"flex",gap:"8px",justifyContent:"center",flexWrap:"wrap",padding:"0 24px"}}>
-            {Object.values(PLATFORMS).map(function(p) {
-              return (
-                <div
-                  key={p.name}
-                  title={p.name}
-                  style={{width:"42px",height:"42px",borderRadius:"10px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"11px",fontWeight:800,color:p.color,cursor:"pointer",transition:"all 0.15s"}}
-                  onMouseEnter={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.2)"; }}
-                  onMouseLeave={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.06)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}
-                >
-                  {p.label}
-                </div>
               );
             })}
           </div>
@@ -703,7 +871,15 @@ function HomePage({ onSelectMovie }) {
       {showHome && (
         <div>
           <Section title="Trending Now">
-            <HorizontalRow movies={trending} onSelect={onSelectMovie} loading={loading} />
+            {loading ? (
+              <div style={{display:"flex",gap:"16px",overflowX:"auto"}}>
+                {Array.from({length:8}).map(function(_,i){ return <MovieCardSkeleton key={i} size="lg" />; })}
+              </div>
+            ) : (
+              <Carousel>
+                {trending.map(function(m) { return <MovieCard key={m.mediaType + "-" + m.id} movie={m} onClick={onSelectMovie} size="lg" />; })}
+              </Carousel>
+            )}
           </Section>
 
           <Divider />
@@ -719,8 +895,8 @@ function HomePage({ onSelectMovie }) {
                       <div
                         key={m.id}
                         onClick={function(){ onSelectMovie(m); }}
-                        style={{display:"flex",alignItems:"center",gap:"14px",padding:"10px 12px",borderRadius:"8px",cursor:"pointer",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",transition:"all 0.15s"}}
-                        onMouseEnter={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; e.currentTarget.style.transform="translateX(3px)"; }}
+                        style={{display:"flex",alignItems:"center",gap:"14px",padding:"10px 12px",borderRadius:"8px",cursor:"pointer",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",transition:"all 0.2s " + EASE}}
+                        onMouseEnter={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; e.currentTarget.style.transform="translateX(4px)"; }}
                         onMouseLeave={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.05)"; e.currentTarget.style.transform="translateX(0)"; }}
                       >
                         <span style={{fontSize:"16px",fontWeight:800,minWidth:"24px",textAlign:"center",color:i<3?"#f5c518":"rgba(255,255,255,0.18)"}}>{i+1}</span>
@@ -751,8 +927,8 @@ function HomePage({ onSelectMovie }) {
                       <div
                         key={m.id}
                         onClick={function(){ onSelectMovie(m); }}
-                        style={{display:"flex",alignItems:"center",gap:"14px",padding:"10px 12px",borderRadius:"8px",cursor:"pointer",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",transition:"all 0.15s"}}
-                        onMouseEnter={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(28,231,131,0.15)"; e.currentTarget.style.transform="translateX(3px)"; }}
+                        style={{display:"flex",alignItems:"center",gap:"14px",padding:"10px 12px",borderRadius:"8px",cursor:"pointer",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",transition:"all 0.2s " + EASE}}
+                        onMouseEnter={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(28,231,131,0.15)"; e.currentTarget.style.transform="translateX(4px)"; }}
                         onMouseLeave={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.05)"; e.currentTarget.style.transform="translateX(0)"; }}
                       >
                         <div style={{position:"relative",width:"46px",height:"66px",borderRadius:"6px",overflow:"hidden",flexShrink:0,background:"#1a1a22"}}>
@@ -773,7 +949,15 @@ function HomePage({ onSelectMovie }) {
           <Divider />
 
           <Section title="New Releases">
-            <HorizontalRow movies={newReleases} onSelect={onSelectMovie} loading={loading} />
+            {loading ? (
+              <div style={{display:"flex",gap:"16px",overflowX:"auto"}}>
+                {Array.from({length:8}).map(function(_,i){ return <MovieCardSkeleton key={i} />; })}
+              </div>
+            ) : (
+              <Carousel>
+                {newReleases.map(function(m) { return <MovieCard key={m.mediaType + "-" + m.id} movie={m} onClick={onSelectMovie} />; })}
+              </Carousel>
+            )}
           </Section>
 
           <footer style={{textAlign:"center",padding:"48px 24px 32px",fontSize:"11px",color:"rgba(255,255,255,0.15)",borderTop:"1px solid rgba(255,255,255,0.05)"}}>
@@ -783,6 +967,7 @@ function HomePage({ onSelectMovie }) {
           </footer>
         </div>
       )}
+      <style>{"@keyframes fadeSlide{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}"}</style>
     </div>
   );
 }
@@ -801,18 +986,8 @@ function SectionTitle({ children }) {
 function Divider() {
   return <div style={{height:"1px",background:"rgba(255,255,255,0.05)",margin:"0 32px"}} />;
 }
-function HorizontalRow({ movies, onSelect, loading }) {
-  return (
-    <div style={{display:"flex",gap:"16px",overflowX:"auto",paddingBottom:"8px",scrollbarWidth:"none"}}>
-      {loading
-        ? Array.from({length:8}).map(function(_,i){ return <MovieCardSkeleton key={i} />; })
-        : movies.map(function(m) { return <MovieCard key={m.mediaType + "-" + m.id} movie={m} onClick={onSelect} />; })
-      }
-    </div>
-  );
-}
 
-export default function StreamWatchGo() {
+export default function Muuvie() {
   const [selectedMovie, setSelectedMovie] = useState(null);
 
   function openMovie(m) {
@@ -826,16 +1001,16 @@ export default function StreamWatchGo() {
       <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,height:"64px",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 32px",background:"rgba(13,13,15,0.9)",borderBottom:"1px solid rgba(255,255,255,0.07)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
         <button
           onClick={function(){ setSelectedMovie(null); window.scrollTo({top:0}); }}
-          style={{display:"flex",alignItems:"center",gap:"10px",background:"none",border:"none",cursor:"pointer",color:"#fff",fontSize:"17px",fontWeight:800,letterSpacing:"-0.02em"}}
+          style={{display:"flex",alignItems:"center",gap:"10px",background:"none",border:"none",cursor:"pointer",color:"#fff",fontSize:"17px",fontWeight:800,letterSpacing:"-0.02em",lineHeight:1,whiteSpace:"nowrap"}}
         >
-          <img src="/logo.png" alt={SITE_NAME} style={{width:"30px",height:"30px",borderRadius:"8px",objectFit:"cover"}} />
-          {SITE_NAME}
+          <img src="/logo.png" alt="" style={{width:"28px",height:"28px",borderRadius:"7px",objectFit:"cover",display:"block",flexShrink:0}} />
+          <span style={{display:"inline-block"}}>{SITE_NAME}</span>
         </button>
 
         <div style={{display:"flex",alignItems:"center",gap:"28px"}}>
           {["Home","New","Popular","Lists","Guide"].map(function(label) {
             return (
-              <button key={label} style={{background:"none",border:"none",cursor:"pointer",fontSize:"13px",fontWeight:500,color:"rgba(255,255,255,0.45)",transition:"color 0.15s"}}
+              <button key={label} style={{background:"none",border:"none",cursor:"pointer",fontSize:"13px",fontWeight:500,color:"rgba(255,255,255,0.45)",transition:"color 0.2s " + EASE}}
                 onMouseEnter={function(e){e.target.style.color="#fff";}}
                 onMouseLeave={function(e){e.target.style.color="rgba(255,255,255,0.45)";}}
               >{label}</button>
@@ -843,7 +1018,7 @@ export default function StreamWatchGo() {
           })}
         </div>
 
-        <button style={{padding:"7px 18px",borderRadius:"6px",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",color:"rgba(255,255,255,0.7)",fontSize:"13px",fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}
+        <button style={{padding:"7px 18px",borderRadius:"6px",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",color:"rgba(255,255,255,0.7)",fontSize:"13px",fontWeight:600,cursor:"pointer",transition:"all 0.2s " + EASE}}
           onMouseEnter={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.12)"; e.currentTarget.style.color="#fff"; }}
           onMouseLeave={function(e){ e.currentTarget.style.background="rgba(255,255,255,0.08)"; e.currentTarget.style.color="rgba(255,255,255,0.7)"; }}
         >Sign In</button>
